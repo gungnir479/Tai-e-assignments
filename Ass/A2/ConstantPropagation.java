@@ -35,6 +35,7 @@ import pascal.taie.util.AnalysisException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConstantPropagation extends
         AbstractDataflowAnalysis<Stmt, CPFact> {
@@ -84,16 +85,25 @@ public class ConstantPropagation extends
         return defStmt.getLValue() instanceof Var;
     }
 
+    public static boolean isChanged(CPFact in, CPFact out) {
+        Set<Var> inVars = in.keySet();
+        Set<Var> outVars = out.keySet();
+        if (!inVars.containsAll(outVars) || !outVars.containsAll(inVars)) return true;
+        for (Var v : inVars) if (!(in.get(v).equals(out.get(v)))) return true;
+        return false;
+    }
+
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
+        CPFact copy = out.copy();
         in.entries().forEach(e -> out.update(e.getKey(), e.getValue()));
 
-        if (!canDeal(stmt)) return false;
+        if (!canDeal(stmt)) return isChanged(out, copy);
         DefinitionStmt defStmt = (DefinitionStmt) stmt;
         Var def = (Var) defStmt.getLValue();
         Value val = evaluate(defStmt.getRValue(), in);
         out.update(def, val);
-        return true;
+        return isChanged(out, copy);
     }
 
     /**
@@ -130,6 +140,7 @@ public class ConstantPropagation extends
             Value op1 = in.get(binExp.getOperand1());
             Value op2 = in.get(binExp.getOperand2());
             if (op1.isNAC() || op2.isNAC()) return Value.getNAC();
+            if (op1.isUndef() || op2.isUndef()) return Value.getUndef();
             if (op1.isConstant() && op2.isConstant()) {
                 int con1 = op1.getConstant();
                 int con2 = op2.getConstant();

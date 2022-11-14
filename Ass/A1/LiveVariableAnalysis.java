@@ -30,6 +30,9 @@ import pascal.taie.ir.exp.RValue;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.stmt.Stmt;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
  * Implementation of classic live variable analysis.
  */

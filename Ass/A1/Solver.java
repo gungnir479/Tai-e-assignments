@@ -46,7 +46,7 @@ public abstract class Solver<Node, Fact> {
      */
     public static <Node, Fact> Solver<Node, Fact> makeSolver(
             DataflowAnalysis<Node, Fact> analysis) {
-        return new WorkListSolver<>(analysis);
+        return new IterativeSolver<>(analysis);
     }
 
     /**
@@ -77,11 +77,7 @@ public abstract class Solver<Node, Fact> {
     }
 
     protected void initializeForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        result.setOutFact(cfg.getEntry(), analysis.newBoundaryFact(cfg));
-        cfg.getNodes().forEach(n -> { if (!cfg.isEntry(n)) {
-            result.setOutFact(n, analysis.newInitialFact());
-            result.setInFact(n, analysis.newInitialFact());
-        }});
+        throw new UnsupportedOperationException();
     }
 
     protected void initializeBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {

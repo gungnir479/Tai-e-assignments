@@ -40,14 +40,10 @@ import pascal.taie.ir.exp.FieldAccess;
 import pascal.taie.ir.exp.NewExp;
 import pascal.taie.ir.exp.RValue;
 import pascal.taie.ir.exp.Var;
-import pascal.taie.ir.stmt.AssignStmt;
-import pascal.taie.ir.stmt.If;
-import pascal.taie.ir.stmt.Stmt;
-import pascal.taie.ir.stmt.SwitchStmt;
+import pascal.taie.ir.stmt.*;
 
-import java.util.Comparator;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class DeadCodeDetection extends MethodAnalysis {
 
@@ -69,9 +65,31 @@ public class DeadCodeDetection extends MethodAnalysis {
                 ir.getResult(LiveVariableAnalysis.ID);
         // keep statements (dead code) sorted in the resulting set
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
-        // TODO - finish me
+
+        deadCode.addAll(controlFlowUnreachable(cfg));
+
+
+
         // Your task is to recognize dead code in ir and add it to deadCode
         return deadCode;
+    }
+
+    private Set<Stmt> controlFlowUnreachable(CFG<Stmt> cfg) {
+        Queue<Stmt> workList = new LinkedBlockingQueue<>();
+        Set<Stmt> reachable = new HashSet<>();
+        workList.add(cfg.getEntry());
+        while (!workList.isEmpty()) {
+            Stmt cur = workList.remove();
+            reachable.add(cur);
+            if (cur instanceof Return) continue;
+            for (Edge<Stmt> e : cfg.getOutEdgesOf(cur)) {
+                workList.add(e.getTarget());
+            }
+        }
+
+        Set<Stmt> res = cfg.getNodes();
+        res.removeAll(reachable);
+        return res;
     }
 
     /**

@@ -1,0 +1,3 @@
+-------------------- <BinaryOp: void undefined()> (constprop) --------------------
+[1@L31] y = x + %intconst0; {%intconst0=1}
+[2@L31] return; {%intconst0=1}

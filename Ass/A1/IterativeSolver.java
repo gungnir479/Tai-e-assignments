@@ -24,37 +24,39 @@ package pascal.taie.analysis.dataflow.solver;
 
 import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
+import pascal.taie.analysis.dataflow.fact.SetFact;
 import pascal.taie.analysis.graph.cfg.CFG;
+import pascal.taie.analysis.graph.cfg.Edge;
+import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.stmt.Nop;
 
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
+class IterativeSolver<Node, Fact> extends Solver<Node, Fact> {
 
-class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
-
-    WorkListSolver(DataflowAnalysis<Node, Fact> analysis) {
+    public IterativeSolver(DataflowAnalysis<Node, Fact> analysis) {
         super(analysis);
     }
 
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        Queue<Node> workList = new LinkedBlockingQueue<>();
-        cfg.getNodes().forEach(n -> { if (!cfg.isEntry(n)) workList.add(n); });
-        while (!workList.isEmpty()) {
-            Node cur = workList.remove();
-            Fact inFact = result.getInFact(cur);
-            cfg.getInEdgesOf(cur).forEach(e -> {
-                Fact outFact = result.getOutFact(e.getSource());
-                analysis.meetInto(outFact, inFact);
-            });
-            if (analysis.transferNode(cur, inFact, result.getOutFact(cur))) {
-                cfg.getOutEdgesOf(cur).forEach(e -> workList.add(e.getTarget()));
-            }
-        }
+        throw new UnsupportedOperationException();
     }
 
     @Override
     protected void doSolveBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        throw new UnsupportedOperationException();
+        boolean dontStop = false;
+        do {
+            dontStop = false;
+            for (Node n : cfg) {
+                if (cfg.isExit(n)) continue;
+
+                Fact outFact = result.getOutFact(n);
+                Fact inFact = result.getInFact(n);
+                for (Edge<Node> e : cfg.getOutEdgesOf(n)) {
+                    Fact in = result.getInFact(e.getTarget());
+                    analysis.meetInto(in, outFact);
+                }
+                dontStop |= analysis.transferNode(n, inFact, outFact);
+            }
+        } while (dontStop);
     }
 }
