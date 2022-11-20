@@ -34,14 +34,7 @@ import pascal.taie.analysis.pta.core.heap.Obj;
 import pascal.taie.ir.exp.InvokeExp;
 import pascal.taie.ir.exp.Var;
 import pascal.taie.ir.proginfo.MethodRef;
-import pascal.taie.ir.stmt.Copy;
-import pascal.taie.ir.stmt.Invoke;
-import pascal.taie.ir.stmt.LoadArray;
-import pascal.taie.ir.stmt.LoadField;
-import pascal.taie.ir.stmt.New;
-import pascal.taie.ir.stmt.StmtVisitor;
-import pascal.taie.ir.stmt.StoreArray;
-import pascal.taie.ir.stmt.StoreField;
+import pascal.taie.ir.stmt.*;
 import pascal.taie.language.classes.ClassHierarchy;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.util.AnalysisException;
@@ -96,7 +89,21 @@ class Solver {
      * Processes new reachable method.
      */
     private void addReachable(JMethod method) {
-        // TODO - finish me
+        if (!callGraph.addReachableMethod(method)) return;
+
+        List<Stmt> stmts = method.getIR().getStmts();
+        for (Stmt stmt : stmts) {
+            if (stmt instanceof New callSite) {
+                VarPtr varPtr = pointerFlowGraph.getVarPtr(callSite.getLValue());
+                PointsToSet objs = new PointsToSet(heapModel.getObj(callSite));
+                workList.addEntry(varPtr, objs);
+            } else if (stmt instanceof Copy callSite) {
+                VarPtr l = pointerFlowGraph.getVarPtr(callSite.getLValue());
+                VarPtr r = pointerFlowGraph.getVarPtr(callSite.getRValue());
+                addPFGEdge(r, l);
+            }
+        }
+
     }
 
     /**
@@ -111,7 +118,14 @@ class Solver {
      * Adds an edge "source -> target" to the PFG.
      */
     private void addPFGEdge(Pointer source, Pointer target) {
-        // TODO - finish me
+        if (!pointerFlowGraph.addEdge(source, target)) return;
+
+        PointsToSet srcPt = target.getPointsToSet();
+        PointsToSet pt = new PointsToSet();
+        for (Obj obj : source.getPointsToSet())
+            if (!srcPt.contains(obj))
+                pt.addObject(obj);
+        if (!pt.isEmpty())  workList.addEntry(target, pt);
     }
 
     /**
