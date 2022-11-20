@@ -23,11 +23,17 @@
 package pascal.taie.analysis.dataflow.inter;
 
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
+import pascal.taie.analysis.graph.callgraph.Edge;
 import pascal.taie.analysis.graph.icfg.ICFG;
+import pascal.taie.analysis.graph.icfg.ICFGEdge;
 import pascal.taie.util.collection.SetQueue;
 
+import java.util.HashSet;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 /**
@@ -43,7 +49,9 @@ class InterSolver<Method, Node, Fact> {
 
     private DataflowResult<Node, Fact> result;
 
-    private Queue<Node> workList;
+    private final Queue<Node> workList = new LinkedBlockingQueue<>();
+
+    private final Set<Node> entries = new HashSet<>();
 
     InterSolver(InterDataflowAnalysis<Node, Fact> analysis,
                 ICFG<Method, Node> icfg) {
@@ -59,10 +67,33 @@ class InterSolver<Method, Node, Fact> {
     }
 
     private void initialize() {
-        // TODO - finish me
+        icfg.entryMethods().forEach(method -> {
+            Node entry = icfg.getEntryOf(method);
+            entries.add(entry);
+            result.setInFact(entry, analysis.newBoundaryFact(entry));
+        });
+        icfg.forEach(node -> {
+            result.setInFact(node, analysis.newInitialFact());
+            result.setOutFact(node, analysis.newInitialFact());
+        });
     }
 
     private void doSolve() {
-        // TODO - finish me
+        for (Node n : icfg.getNodes())
+            if (!entries.contains(n))
+                workList.add(n);
+
+        while (!workList.isEmpty()) {
+            Node cur = workList.remove();
+            Fact inFact = result.getInFact(cur);
+            for (ICFGEdge<Node> edge : icfg.getInEdgesOf(cur)) {
+                Fact outFact = analysis.transferEdge(edge, result.getOutFact(edge.getSource()));
+                analysis.meetInto(outFact, inFact);
+            }
+
+            if (analysis.transferNode(cur, inFact, result.getOutFact(cur))) {
+                icfg.getOutEdgesOf(cur).forEach(e -> workList.add(e.getTarget()));
+            }
+        }
     }
 }
