@@ -31,6 +31,9 @@ import pascal.taie.analysis.pta.core.heap.Obj;
 import pascal.taie.ir.stmt.Invoke;
 import pascal.taie.language.classes.JMethod;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Implementation of 2-call-site sensitivity.
  */
@@ -43,19 +46,22 @@ public class _2CallSelector implements ContextSelector {
 
     @Override
     public Context selectContext(CSCallSite callSite, JMethod callee) {
-        // TODO - finish me
-        return null;
+        Context c = callSite.getContext();
+        Invoke cs = callSite.getCallSite();
+        List<Invoke> context = new ArrayList<>();
+        for (int i = 0; i < c.getLength(); i++)
+            context.add((Invoke) c.getElementAt(i));
+        context.add(cs);
+        return ListContext.make(context);
     }
 
     @Override
     public Context selectContext(CSCallSite callSite, CSObj recv, JMethod callee) {
-        // TODO - finish me
-        return null;
+        return selectContext(callSite, callee);
     }
 
     @Override
     public Context selectHeapContext(CSMethod method, Obj obj) {
-        // TODO - finish me
-        return null;
+        return method.getContext();
     }
 }
