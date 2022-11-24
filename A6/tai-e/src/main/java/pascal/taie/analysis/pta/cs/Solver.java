@@ -106,7 +106,7 @@ class Solver {
      * Processes new reachable context-sensitive method.
      */
     private void addReachable(CSMethod csMethod) {
-        if (!callGraph.contains(csMethod)) return;
+        if (!callGraph.addReachableMethod(csMethod)) return;
 
         List<Stmt> stmts = csMethod.getMethod().getIR().getStmts();
         for (Stmt stmt : stmts) {
@@ -130,8 +130,10 @@ class Solver {
                 CSVar varPtr = csManager.getCSVar(c, s.getLValue());
                 addPFGEdge(staticField, varPtr);
             } else if (stmt instanceof Invoke s && s.isStatic()) {
-                Context ct = contextSelector.selectContext(csManager.getCSCallSite(c, s), resolveCallee(null, s));
-//                todo
+                JMethod m = resolveCallee(null, s);
+                Context ct = contextSelector.selectContext(csManager.getCSCallSite(c, s), m);
+
+                processCall(csManager.getCSMethod(ct, m), csManager.getCSCallSite(c, s));
             }
         }
     }
@@ -201,7 +203,7 @@ class Solver {
                     for (LoadArray stmt : var.getLoadArrays()) {
                         ArrayIndex arrayIndex = csManager.getArrayIndex(obj);
                         CSVar csVar = csManager.getCSVar(c, stmt.getLValue());
-                        addPFGEdge(csVar, arrayIndex);
+                        addPFGEdge(arrayIndex, csVar);
                     }
 
                     processCall(csVar_, obj);
@@ -239,7 +241,6 @@ class Solver {
      */
     private void processCall(CSVar recv, CSObj recvObj) {
         Context c = recv.getContext();
-        Context cp = recvObj.getContext();
 
         for (Invoke l : recv.getVar().getInvokes()) {
             JMethod m = resolveCallee(recvObj, l);

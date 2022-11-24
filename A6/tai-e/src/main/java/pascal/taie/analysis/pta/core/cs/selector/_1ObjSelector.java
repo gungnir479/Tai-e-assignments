@@ -42,7 +42,7 @@ public class _1ObjSelector implements ContextSelector {
 
     @Override
     public Context selectContext(CSCallSite callSite, JMethod callee) {
-        return null;
+        return callSite.getContext();
     }
 
     @Override
@@ -52,7 +52,6 @@ public class _1ObjSelector implements ContextSelector {
 
     @Override
     public Context selectHeapContext(CSMethod method, Obj obj) {
-        // TODO - finish me
-        return null;
+        return ListContext.make();
     }
 }
